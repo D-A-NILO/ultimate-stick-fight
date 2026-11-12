@@ -63,6 +63,9 @@ namespace Wreckyard.Core
         /// <summary>Number of placed items.</summary>
         public int ItemCount => items.Count;
 
+        /// <summary>All placed items, in no particular order. Do not place or remove while enumerating.</summary>
+        public IReadOnlyCollection<PlacedItem> Items => items.Values;
+
         /// <summary>
         /// Switches to a new grid. Placed items with any cell outside it, permanent cells and spawn points
         /// that no longer fit are removed with <see cref="RemovalReason.Resized"/> and one logged warning.
@@ -239,6 +242,16 @@ namespace Wreckyard.Core
         /// </summary>
         public PlacementResult TryPlace(Footprint footprint, Vector2Int anchor, int rotation, int ownerIndex, out int itemId)
         {
+            return TryPlace(footprint, anchor, rotation, ownerIndex, null, out itemId);
+        }
+
+        /// <summary>
+        /// Same as the overload without a definition id, but the placed item records
+        /// <paramref name="definitionId"/> (null or empty means none). It is already set on the item passed to
+        /// <see cref="ItemPlaced"/>, so listeners do not need to wait for <paramref name="itemId"/>.
+        /// </summary>
+        public PlacementResult TryPlace(Footprint footprint, Vector2Int anchor, int rotation, int ownerIndex, string definitionId, out int itemId)
+        {
             if (ownerIndex < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(ownerIndex), ownerIndex, "Owner index must be 0 or more.");
@@ -252,7 +265,7 @@ namespace Wreckyard.Core
             }
 
             itemId = nextItemId++;
-            var item = new PlacedItem(itemId, ownerIndex, anchor, Footprint.NormalizeRotation(rotation), cellBuffer.ToArray());
+            var item = new PlacedItem(itemId, ownerIndex, anchor, Footprint.NormalizeRotation(rotation), cellBuffer.ToArray(), definitionId);
             items.Add(itemId, item);
             foreach (Vector2Int cell in item.Cells)
             {

@@ -7,14 +7,19 @@ using UnityEditor;
 namespace Wreckyard.Core
 {
     /// <summary>
-    /// TEMPORARY manual test rig (step 2). Serialized test inputs plus context-menu actions that drive a
-    /// <see cref="GridOccupancy"/>. Draws the probe footprint green when valid and red when not, and logs
-    /// every occupancy event. Works in Edit mode and Play mode. Remove once real placement exists.
+    /// TEMPORARY manual test rig (steps 2 and 3). Serialized test inputs plus context-menu actions that drive a
+    /// <see cref="GridOccupancy"/>. With Use Definition on, the footprint, allowed rotation and definition id
+    /// come from the selected <see cref="ItemDefinition"/> in the catalog; with it off, the raw footprint cells
+    /// are used and items are placed without a definition. Draws the probe footprint green when valid and red
+    /// when not, and logs every occupancy event. Works in Edit mode and Play mode. Remove once real placement exists.
     /// </summary>
     [ExecuteAlways]
     public class PlacementProbe : MonoBehaviour
     {
         [SerializeField] private GridOccupancyBehaviour occupancyBehaviour;
+        [SerializeField] private ItemCatalog catalog;
+        [SerializeField] private bool useDefinition = true;
+        [SerializeField, Min(0)] private int definitionIndex;
         [SerializeField] private List<Vector2Int> footprintCells = new List<Vector2Int>
         {
             new Vector2Int(0, 0),
@@ -41,39 +46,52 @@ namespace Wreckyard.Core
             SubscribeTo(null);
         }
 
+        [ContextMenu("Select Next Definition")]
+        private void SelectNextDefinition()
+        {
+            StepDefinition(1);
+        }
+
+        [ContextMenu("Select Previous Definition")]
+        private void SelectPreviousDefinition()
+        {
+            StepDefinition(-1);
+        }
+
         [ContextMenu("Check")]
         private void Check()
         {
-            if (TryGetContext(out GridOccupancy occupancy, out Footprint footprint))
+            if (TryGetContext(out GridOccupancy occupancy, out Footprint footprint, out int placeRotation, out ItemDefinition definition))
             {
-                Log($"Check {Describe()}: {occupancy.CheckPlacement(footprint, anchor, rotation)}");
+                Log($"Check {Describe(definition, placeRotation)}: {occupancy.CheckPlacement(footprint, anchor, placeRotation)}");
             }
         }
 
         [ContextMenu("Place")]
         private void Place()
         {
-            if (!TryGetContext(out GridOccupancy occupancy, out Footprint footprint))
+            if (!TryGetContext(out GridOccupancy occupancy, out Footprint footprint, out int placeRotation, out ItemDefinition definition))
             {
                 return;
             }
 
-            PlacementResult result = occupancy.TryPlace(footprint, anchor, rotation, ownerIndex, out int itemId);
+            string definitionId = definition != null ? definition.Id : null;
+            PlacementResult result = occupancy.TryPlace(footprint, anchor, placeRotation, ownerIndex, definitionId, out int itemId);
             if (result == PlacementResult.Ok)
             {
                 placedIds.Add(itemId);
-                Log($"Place {Describe()}: Ok, id {itemId}");
+                Log($"Place {Describe(definition, placeRotation)}: Ok, id {itemId}");
             }
             else
             {
-                Log($"Place {Describe()}: {result}");
+                Log($"Place {Describe(definition, placeRotation)}: {result}");
             }
         }
 
         [ContextMenu("Remove Last")]
         private void RemoveLast()
         {
-            if (!TryGetContext(out GridOccupancy occupancy, out _))
+            if (!TryGetOccupancy(out GridOccupancy occupancy))
             {
                 return;
             }
@@ -95,18 +113,18 @@ namespace Wreckyard.Core
         [ContextMenu("Find Nearest Valid")]
         private void FindNearestValid()
         {
-            if (!TryGetContext(out GridOccupancy occupancy, out Footprint footprint))
+            if (!TryGetContext(out GridOccupancy occupancy, out Footprint footprint, out int placeRotation, out _))
             {
                 return;
             }
 
-            if (!occupancy.TryFindNearestValid(footprint, rotation, anchor, out Vector2Int found))
+            if (!occupancy.TryFindNearestValid(footprint, placeRotation, anchor, out Vector2Int found))
             {
-                Log($"Find Nearest Valid from {anchor}, rotation {rotation}: none found.");
+                Log($"Find Nearest Valid from {anchor}, rotation {placeRotation}: none found.");
                 return;
             }
 
-            Log($"Find Nearest Valid from {anchor}, rotation {rotation}: {found}");
+            Log($"Find Nearest Valid from {anchor}, rotation {placeRotation}: {found}");
             RecordUndo("Find Nearest Valid");
             anchor = found;
         }
@@ -114,7 +132,7 @@ namespace Wreckyard.Core
         [ContextMenu("Add Permanent Cell")]
         private void AddPermanentCell()
         {
-            if (TryGetContext(out GridOccupancy occupancy, out _))
+            if (TryGetOccupancy(out GridOccupancy occupancy))
             {
                 bool added = occupancy.MarkPermanent(anchor);
                 Log($"Add Permanent Cell at {anchor}: " +
@@ -125,7 +143,7 @@ namespace Wreckyard.Core
         [ContextMenu("Remove Permanent Cell")]
         private void RemovePermanentCell()
         {
-            if (TryGetContext(out GridOccupancy occupancy, out _))
+            if (TryGetOccupancy(out GridOccupancy occupancy))
             {
                 Log($"Remove Permanent Cell at {anchor}: " + (occupancy.UnmarkPermanent(anchor) ? "removed" : "not permanent"));
             }
@@ -134,7 +152,7 @@ namespace Wreckyard.Core
         [ContextMenu("Add Spawn Point")]
         private void AddSpawnPoint()
         {
-            if (TryGetContext(out GridOccupancy occupancy, out _))
+            if (TryGetOccupancy(out GridOccupancy occupancy))
             {
                 bool added = occupancy.AddSpawnPoint(anchor);
                 Log($"Add Spawn Point at {anchor}: " +
@@ -145,7 +163,7 @@ namespace Wreckyard.Core
         [ContextMenu("Remove Spawn Point")]
         private void RemoveSpawnPoint()
         {
-            if (TryGetContext(out GridOccupancy occupancy, out _))
+            if (TryGetOccupancy(out GridOccupancy occupancy))
             {
                 Log($"Remove Spawn Point at {anchor}: " + (occupancy.RemoveSpawnPoint(anchor) ? "removed" : "no spawn point there"));
             }
@@ -154,7 +172,7 @@ namespace Wreckyard.Core
         [ContextMenu("Bomb At Anchor")]
         private void BombAtAnchor()
         {
-            if (!TryGetContext(out GridOccupancy occupancy, out _))
+            if (!TryGetOccupancy(out GridOccupancy occupancy))
             {
                 return;
             }
@@ -179,7 +197,7 @@ namespace Wreckyard.Core
         [ContextMenu("Clear Placed")]
         private void ClearPlaced()
         {
-            if (TryGetContext(out GridOccupancy occupancy, out _))
+            if (TryGetOccupancy(out GridOccupancy occupancy))
             {
                 occupancy.ClearPlaced();
                 placedIds.Clear();
@@ -190,16 +208,20 @@ namespace Wreckyard.Core
         private void OnDrawGizmos()
         {
             GridOccupancy occupancy = occupancyBehaviour != null ? occupancyBehaviour.Occupancy : null;
-            if (occupancy == null || footprintCells.Count == 0)
+            if (occupancy == null)
             {
                 return;
             }
 
             EnsureSubscribed();
 
-            var footprint = new Footprint(footprintCells);
-            PlacementResult result = occupancy.CheckPlacement(footprint, anchor, rotation);
-            footprint.GetCells(anchor, rotation, cellBuffer);
+            if (!TryGetShape(out Footprint footprint, out int placeRotation, out ItemDefinition definition, out _))
+            {
+                return;
+            }
+
+            PlacementResult result = occupancy.CheckPlacement(footprint, anchor, placeRotation);
+            footprint.GetCells(anchor, placeRotation, cellBuffer);
 
             GridModel model = occupancy.Model;
             Vector3 cellSize = new Vector3(model.CellSize, model.CellSize, 0f);
@@ -213,29 +235,112 @@ namespace Wreckyard.Core
             Gizmos.DrawWireCube(model.CellToWorldCenter(anchor), cellSize);
 
 #if UNITY_EDITOR
-            Handles.Label(model.CellToWorldCorner(anchor + Vector2Int.up), result.ToString());
+            string label = definition != null ? $"{definition.DisplayName}: {result}" : result.ToString();
+            Handles.Label(model.CellToWorldCorner(anchor + Vector2Int.up), label);
 #endif
         }
 
-        private bool TryGetContext(out GridOccupancy occupancy, out Footprint footprint)
+        private void StepDefinition(int step)
+        {
+            if (catalog == null || catalog.Count == 0)
+            {
+                LogWarning("Select Definition: assign a catalog with at least one entry.");
+                return;
+            }
+
+            RecordUndo("Select Definition");
+            int count = catalog.Count;
+            definitionIndex = ((definitionIndex + step) % count + count) % count;
+
+            ItemDefinition definition = catalog.Items[definitionIndex];
+            Log(definition != null
+                ? $"Selected definition {definitionIndex}: {definition.DisplayName} ({definition.Id})"
+                : $"Selected definition {definitionIndex}: empty catalog slot");
+        }
+
+        private bool TryGetOccupancy(out GridOccupancy occupancy)
         {
             occupancy = occupancyBehaviour != null ? occupancyBehaviour.Occupancy : null;
-            footprint = null;
-
             if (occupancy == null)
             {
                 LogWarning("No occupancy yet: assign a GridOccupancyBehaviour whose grid and config are set.");
                 return false;
             }
 
-            if (footprintCells.Count == 0)
+            EnsureSubscribed();
+            return true;
+        }
+
+        private bool TryGetContext(out GridOccupancy occupancy, out Footprint footprint, out int placeRotation, out ItemDefinition definition)
+        {
+            footprint = null;
+            placeRotation = 0;
+            definition = null;
+
+            if (!TryGetOccupancy(out occupancy))
             {
-                LogWarning("The probe footprint has no cells.");
                 return false;
             }
 
-            EnsureSubscribed();
-            footprint = new Footprint(footprintCells);
+            if (!TryGetShape(out footprint, out placeRotation, out definition, out string problem))
+            {
+                LogWarning(problem);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Footprint, rotation and definition the probe would place right now. Definition is null when
+        /// Use Definition is off.
+        /// </summary>
+        private bool TryGetShape(out Footprint footprint, out int placeRotation, out ItemDefinition definition, out string problem)
+        {
+            footprint = null;
+            placeRotation = Footprint.NormalizeRotation(rotation);
+            definition = null;
+            problem = null;
+
+            if (!useDefinition)
+            {
+                if (footprintCells.Count == 0)
+                {
+                    problem = "The probe footprint has no cells.";
+                    return false;
+                }
+
+                footprint = new Footprint(footprintCells);
+                return true;
+            }
+
+            if (catalog == null || catalog.Count == 0)
+            {
+                problem = "Use Definition is on, but no catalog (or an empty one) is assigned.";
+                return false;
+            }
+
+            if (definitionIndex >= catalog.Count)
+            {
+                problem = $"Definition Index {definitionIndex} is outside the catalog (0 to {catalog.Count - 1}).";
+                return false;
+            }
+
+            definition = catalog.Items[definitionIndex];
+            if (definition == null)
+            {
+                problem = $"Catalog slot {definitionIndex} is empty.";
+                return false;
+            }
+
+            if (!definition.TryCreateFootprint(out footprint))
+            {
+                problem = $"Definition '{definition.name}' has a footprint with no cells.";
+                definition = null;
+                return false;
+            }
+
+            placeRotation = definition.GetAllowedRotation(rotation);
             return true;
         }
 
@@ -276,7 +381,7 @@ namespace Wreckyard.Core
 
         private void HandleItemPlaced(PlacedItem item)
         {
-            Log($"Event ItemPlaced: id {item.Id}, owner {item.OwnerIndex}, anchor {item.Anchor}, rotation {item.Rotation}, {item.Cells.Count} cell(s)");
+            Log($"Event ItemPlaced: id {item.Id}, definition {item.DefinitionId ?? "none"}, owner {item.OwnerIndex}, anchor {item.Anchor}, rotation {item.Rotation}, {item.Cells.Count} cell(s)");
         }
 
         private void HandleItemRemoved(PlacedItem item, RemovalReason reason)
@@ -294,9 +399,11 @@ namespace Wreckyard.Core
             Log($"Event SpawnPointRemoved: {cell} ({reason})");
         }
 
-        private string Describe()
+        private string Describe(ItemDefinition definition, int placeRotation)
         {
-            return $"anchor {anchor}, rotation {rotation}";
+            string what = definition != null ? $"{definition.Id} at " : string.Empty;
+            string forced = placeRotation != Footprint.NormalizeRotation(rotation) ? " (forced: definition cannot rotate)" : string.Empty;
+            return $"{what}anchor {anchor}, rotation {placeRotation}{forced}";
         }
 
         private void RecordUndo(string actionName)

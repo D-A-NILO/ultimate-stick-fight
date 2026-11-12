@@ -7,13 +7,14 @@ namespace Wreckyard.Core
     /// <summary>Immutable record of an item placed on the grid.</summary>
     public sealed class PlacedItem
     {
-        internal PlacedItem(int id, int ownerIndex, Vector2Int anchor, int rotation, Vector2Int[] cells)
+        internal PlacedItem(int id, int ownerIndex, Vector2Int anchor, int rotation, Vector2Int[] cells, string definitionId = null)
         {
             Id = id;
             OwnerIndex = ownerIndex;
             Anchor = anchor;
             Rotation = rotation;
             Cells = Array.AsReadOnly(cells);
+            DefinitionId = string.IsNullOrEmpty(definitionId) ? null : definitionId;
         }
 
         /// <summary>Unique id, never reused by the same occupancy.</summary>
@@ -30,5 +31,11 @@ namespace Wreckyard.Core
 
         /// <summary>Grid cells the item blocks.</summary>
         public IReadOnlyList<Vector2Int> Cells { get; }
+
+        /// <summary>
+        /// Id of the item definition this was placed from, or null when it was placed without one.
+        /// Plain data: resolve it through an item catalog.
+        /// </summary>
+        public string DefinitionId { get; }
     }
 }

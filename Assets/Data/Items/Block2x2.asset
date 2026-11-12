@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53c1a1030a892e743af016496492dbf5, type: 3}
+  m_Name: Block2x2
+  m_EditorClassIdentifier: Assembly-CSharp::Wreckyard.Core.ItemDefinition
+  id: block_2x2
+  displayName: Block 2x2
+  category: 0
+  footprint:
+  - min: {x: 0, y: 0}
+    size: {x: 1, y: 1}
+  canRotate: 1
+  prefab: {fileID: 349215952818457488, guid: 2fa42d16bf1eb39488a7a90a3eb3b70a, type: 3}
