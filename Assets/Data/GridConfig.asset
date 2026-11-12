@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 218db8ead6e46da46baae2674e3d439f, type: 3}
   m_Name: GridConfig
   m_EditorClassIdentifier: Assembly-CSharp::Wreckyard.Core.GridConfig
-  columns: 30
-  rows: 17
+  columns: 25
+  rows: 14
   cellSize: 1
