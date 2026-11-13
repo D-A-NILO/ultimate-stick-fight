@@ -17,6 +17,6 @@ MonoBehaviour:
   category: 0
   footprint:
   - min: {x: 0, y: 0}
-    size: {x: 1, y: 1}
+    size: {x: 2, y: 2}
   canRotate: 1
   prefab: {fileID: 349215952818457488, guid: 2fa42d16bf1eb39488a7a90a3eb3b70a, type: 3}

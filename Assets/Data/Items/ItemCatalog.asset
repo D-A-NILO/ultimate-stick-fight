@@ -12,4 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 562ee47d8845f5342b2042e006463e28, type: 3}
   m_Name: ItemCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Wreckyard.Core.ItemCatalog
-  items: []
+  items:
+  - {fileID: 11400000, guid: daf405867d4bd9940889861aeb790b24, type: 2}
+  - {fileID: 11400000, guid: e63a66476205abd418ffddec5e65cdc6, type: 2}
+  - {fileID: 11400000, guid: 01cc854ad217fc84b842ca84a5c6503e, type: 2}
+  - {fileID: 11400000, guid: 410970253d1086d44b15ce9e4d991e6c, type: 2}
+  - {fileID: 11400000, guid: 6478dbf91bc97ea40829a16fc11a2c66, type: 2}
