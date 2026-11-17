@@ -32,6 +32,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float wallCheckDistance = 0.6f;
     [SerializeField] private LayerMask groundLayer;
 
+    [Header("Ground Detection")]
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private float groundCheckDistance = 0.2f;
+
 
     private Rigidbody2D rb;
     private Vector2 movement;
@@ -72,6 +76,7 @@ public class PlayerMovement : MonoBehaviour
     {
         movement = moveAction.ReadValue<Vector2>();
 
+        CheckGround();
         CheckWall();
         WallSlide();
         WallJump();
@@ -196,6 +201,16 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+
+    private void CheckGround()
+    {
+        isGrounded = Physics2D.Raycast(
+            groundCheck.position,
+            Vector2.down,
+            groundCheckDistance,
+            groundLayer
+        );
+    }
     private void WallSlide()
     {
         if (isTouchingWall && !isGrounded && !isDashing)
@@ -241,21 +256,23 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("ground"))
-        {
-            isGrounded = true;
-        }
-    }
+    //private void OnCollisionEnter2D(Collision2D collision)
+    //{
+    //    if (collision.gameObject.CompareTag("ground"))
+    //    {
+    //        isGrounded = true;
+    //        Debug.Log("im on the ground");
+    //    }
+    //}
 
-    private void OnCollisionExit2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("ground"))
-        {
-            isGrounded = false;
-        }
-    }
+    //private void OnCollisionExit2D(Collision2D collision)
+    //{
+    //    if (collision.gameObject.CompareTag("ground"))
+    //    {
+    //        isGrounded = false;
+    //        Debug.Log("im not on the ground");
+    //    }
+    //}
 
     private IEnumerator Dash()
     {
