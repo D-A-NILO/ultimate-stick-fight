@@ -528,7 +528,7 @@ GameObject:
   - component: {fileID: 1551113053}
   m_Layer: 6
   m_Name: Square (1)
-  m_TagString: ground
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -833,7 +833,7 @@ MonoBehaviour:
   dashCooldown: 1
   coyoteTime: 0.15
   jumpBufferTime: 0.15
-  wallSlideSpeed: 2
+  wallSlideSpeed: 5
   wallJumpForce: {x: 8, y: 12}
   wallJumpControlTime: 0.2
   wallCheck: {fileID: 793615614}
@@ -854,7 +854,7 @@ GameObject:
   - component: {fileID: 2072799792}
   m_Layer: 6
   m_Name: Square (2)
-  m_TagString: ground
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
